@@ -8,13 +8,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 1. Use the pre-installed vcpkg location
+      # 1. Install Ruby and Asciidoctor (The "Proper Fix")
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2' # Stable Ruby version
+          
+      - name: Install Asciidoctor
+        run: gem install asciidoctor
+
+      # 2. Setup VCPKG environment
       - name: Set VCPKG_ROOT
         run: |
           echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" >> $env:GITHUB_ENV
           echo "$env:VCPKG_INSTALLATION_ROOT" >> $env:GITHUB_PATH
 
-      # 2. Cache the vcpkg build products (Crucial for C++ projects)
+      # 3. Restore the 2.1-hour cache
       - name: Restore vcpkg cache
         uses: actions/cache@v4
         with:
@@ -25,7 +34,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-vcpkg-
 
-      # 3. Configure and Build using the built-in vcpkg toolchain
+      # 4. Configure CMake (Now includes the doc tools)
       - name: Configure CMake
         run: |
           mkdir build
@@ -33,10 +42,12 @@ jobs:
             -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" `
             -DWITH_XC_ALL=ON
 
+      # 5. Final Compilation
       - name: Build
         run: |
           cmake --build build --config Release --parallel
 
+      # 6. Save the .exe
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
