@@ -19,20 +19,18 @@ jobs:
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
 
-      # 1. Install WinRT support via vcpkg
       - name: Install Windows Hello Dependencies
         run: |
           vcpkg install cppwinrt:x64-windows
 
-      # 2. Setup Ruby and Asciidoctor
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.2'
+          
       - name: Install Asciidoctor
         run: gem install asciidoctor
 
-      # 3. Configure CMake with explicit Windows SDK targeting
       - name: Configure CMake
         run: |
           mkdir build
@@ -41,14 +39,20 @@ jobs:
             -DWITH_XC_ALL=ON `
             -DWITH_XC_WINHELLO=ON 
 
-      # 4. Final Compilation
       - name: Build
         run: |
           cmake --build build --config Release --parallel
 
-      # 5. Save the .exe
+      # This step gathers all the required .dll files so the app can actually run
+      - name: Deploy Qt Dependencies
+        run: |
+          $WINDEPLOYQT = "build/vcpkg_installed/x64-windows/tools/qt5-tools/bin/windeployqt.exe"
+          & $WINDEPLOYQT --release --no-translations --no-opengl-sw build/src/Release/keepassxc.exe
+
       - name: Upload Artifact
-        uses: actions/artifact@v4
+        uses: actions/upload-artifact@v4
         with:
           name: KeePassXC-Windows-Binary
-          path: build/src/Release/keepassxc.exe
+          path: |
+            build/src/Release/keepassxc.exe
+            build/src/Release/*.dll
