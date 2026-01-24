@@ -21,7 +21,8 @@ jobs:
 
       - name: Install Windows Hello Dependencies
         run: |
-          vcpkg install cppwinrt:x64-windows
+          # Use --classic to bypass the manifest check and install to the system root
+          vcpkg install cppwinrt:x64-windows --classic
 
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
