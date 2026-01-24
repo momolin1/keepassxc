@@ -63,17 +63,4 @@ jobs:
 
       - name: Build
         run: cmake --build build --config Release --parallel
-
-      - name: Deploy Qt Dependencies  # ✅ Qt5 path
-        shell: pwsh
-        run: |
-          $WINDEPLOYQT = "build/vcpkg_installed/x64-windows/tools/qt5-tools/bin/windeployqt.exe"
-          & $WINDEPLOYQT --release --no-translations --no-opengl-sw build/src/Release/keepassxc.exe
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: KeePassXC-Windows-Binary
-          path: |
-            build/src/Release/keepassxc.exe
-            build/src/Release/*.dll
+        
