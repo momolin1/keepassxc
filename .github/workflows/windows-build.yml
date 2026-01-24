@@ -61,12 +61,13 @@ jobs:
             -DWITH_XC_ALL=ON `
             -DWITH_XC_WINDOWSHELLO=ON
 
-      - name: Build  # <-- vcpkg auto-installs from vcpkg.json + cppwinrt
+      - name: Build
         run: cmake --build build --config Release --parallel
 
-      - name: Deploy Qt Dependencies
+      - name: Deploy Qt Dependencies  # ✅ Qt5 path
+        shell: pwsh
         run: |
-          $WINDEPLOYQT = "build/vcpkg_installed/x64-windows/tools/qt6/bin/windeployqt.exe"
+          $WINDEPLOYQT = "build/vcpkg_installed/x64-windows/tools/qt5-tools/bin/windeployqt.exe"
           & $WINDEPLOYQT --release --no-translations --no-opengl-sw build/src/Release/keepassxc.exe
 
       - name: Upload Artifact
