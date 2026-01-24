@@ -1,55 +1,54 @@
-name: Windows Build
+name: Windows Build (with Hello)
 on: [push, workflow_dispatch]
 
 jobs:
   build:
     runs-on: windows-latest
+    env:
+      VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+      VCPKG_ROOT: 'C:\vcpkg'
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 1. Install Ruby and Asciidoctor (The "Proper Fix")
+      - name: Export GitHub Actions Cache Environment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+
+      # 1. Install WinRT support via vcpkg
+      - name: Install Windows Hello Dependencies
+        run: |
+          vcpkg install cppwinrt:x64-windows
+
+      # 2. Setup Ruby and Asciidoctor
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: '3.2' # Stable Ruby version
-          
+          ruby-version: '3.2'
       - name: Install Asciidoctor
         run: gem install asciidoctor
 
-      # 2. Setup VCPKG environment
-      - name: Set VCPKG_ROOT
-        run: |
-          echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" >> $env:GITHUB_ENV
-          echo "$env:VCPKG_INSTALLATION_ROOT" >> $env:GITHUB_PATH
-
-      # 3. Restore the 2.1-hour cache
-      - name: Restore vcpkg cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ${{ env.VCPKG_ROOT }}/installed
-            ${{ env.VCPKG_ROOT }}/packages
-          key: ${{ runner.os }}-vcpkg-${{ hashFiles('vcpkg.json') }}
-          restore-keys: |
-            ${{ runner.os }}-vcpkg-
-
-      # 4. Configure CMake (Now includes the doc tools)
+      # 3. Configure CMake with explicit Windows SDK targeting
       - name: Configure CMake
         run: |
           mkdir build
           cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
             -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" `
-            -DWITH_XC_ALL=ON
+            -DWITH_XC_ALL=ON `
+            -DWITH_XC_WINHELLO=ON 
 
-      # 5. Final Compilation
+      # 4. Final Compilation
       - name: Build
         run: |
           cmake --build build --config Release --parallel
 
-      # 6. Save the .exe
+      # 5. Save the .exe
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/artifact@v4
         with:
           name: KeePassXC-Windows-Binary
           path: build/src/Release/keepassxc.exe
