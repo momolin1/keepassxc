@@ -5,24 +5,49 @@ jobs:
   build:
     runs-on: windows-latest
     env:
-      VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+      VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"  # GitHub cache for packages
       VCPKG_ROOT: 'C:\vcpkg'
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Export GitHub Actions Cache Environment
+      - name: Setup MSVC Developer Prompt  # ✅ Linker + WinRT paths
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Export GitHub Actions Cache Environment  # ✅ vcpkg GitHub cache
         uses: actions/github-script@v7
         with:
           script: |
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
 
-      - name: Install Windows Hello Dependencies
+      - name: Cache vcpkg root  # ✅ Speeds bootstrap
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.VCPKG_ROOT }}
+          key: vcpkg-${{ hashFiles('vcpkg.json') }}-${{ runner.os }}
+          restore-keys: vcpkg-${{ runner.os }}-
+
+      - name: Cache Ruby gems  # ✅ Ruby speedup
+        uses: actions/cache@v4
+        with:
+          path: C:\Users\runneradmin\.gem\ruby\3.2.0\gems
+          key: ruby-gems-${{ runner.os }}-${{ hashFiles('**/Gemfile.lock') }}
+          restore-keys: ruby-gems-${{ runner.os }}-
+
+      - name: Cache Maven packages  # ✅ Maven speedup
+        uses: actions/cache@v4
+        with:
+          path: C:\Users\runneradmin\.m2\repository
+          key: maven-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: maven-${{ runner.os }}-
+
+      - name: Install Windows Hello Dependencies  # ✅ cppwinrt
         run: |
-          # Use --classic to bypass the manifest check and install to the system root
-          vcpkg install cppwinrt:x64-windows --classic
+          vcpkg install cppwinrt:x64-windows
 
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
@@ -32,19 +57,24 @@ jobs:
       - name: Install Asciidoctor
         run: gem install asciidoctor
 
-      - name: Configure CMake
+      - name: Cache build directory  # ✅ CMake reuse
+        uses: actions/cache@v4
+        with:
+          path: build
+          key: build-${{ runner.os }}-${{ hashFiles('CMakeLists.txt', '**/CMakeLists.txt') }}-${{ github.sha }}
+          restore-keys: build-${{ runner.os }}-${{ hashFiles('CMakeLists.txt', '**/CMakeLists.txt') }}-
+
+      - name: Configure CMake  # ✅ Correct Windows Hello flag
         run: |
           mkdir build
           cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
             -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" `
             -DWITH_XC_ALL=ON `
-            -DWITH_XC_WINHELLO=ON 
+            -DWITH_XC_WINDOWSHELLO=ON
 
       - name: Build
-        run: |
-          cmake --build build --config Release --parallel
+        run: cmake --build build --config Release --parallel
 
-      # This step gathers all the required .dll files so the app can actually run
       - name: Deploy Qt Dependencies
         run: |
           $WINDEPLOYQT = "build/vcpkg_installed/x64-windows/tools/qt5-tools/bin/windeployqt.exe"
