@@ -1,5 +1,5 @@
 name: KeePassXC Official Windows Build
-on: [push, workflow_dispatch]
+on: workflow_dispatch
 
 jobs:
   build:
@@ -37,11 +37,18 @@ jobs:
           }
           $manifest | ConvertTo-Json -Depth 10 | Set-Content vcpkg.json
 
+      - name: Cache build
+        uses: actions/cache@v4
+        with:
+          path: build
+          key: build-${{ runner.os }}-${{ hashFiles('CMakeLists.txt') }}-${{ github.sha }}
+          restore-keys: build-${{ runner.os }}-${{ hashFiles('CMakeLists.txt') }}-
+
       # 3. Configure CMake using Ninja (as recommended in the wiki)
       - name: Configure CMake
         run: |
           mkdir build
-          cmake -G Ninja -S . -B build `
+          cmake -G "Visual Studio 17 2022" -S . -B build `
             -DCMAKE_BUILD_TYPE=Release `
             -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" `
             -DWITH_XC_ALL=ON `
@@ -50,19 +57,6 @@ jobs:
             -DDWITH_XC_KEESHARE=OFF `
            
 
-      # 4. Build with Ninja
+      # Build using MSVC (via CMake build wrapper)
       - name: Build
-        run: ninja -C build -j 4
-
-      # 5. Create the ZIP Package (Official CPack method)
-      - name: Package with CPack
-        run: |
-          cd build
-          cpack -G ZIP
-
-      # 6. Upload the final .zip
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: KeePassXC-Windows-Official
-          path: build/*.zip
+        run: cmake --build build --config Release --parallel 4
