@@ -1,0 +1,32 @@
+name: KeePassXC Official Windows Build
+on: [push, workflow_dispatch]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    env:
+      VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+      VCPKG_ROOT: 'C:\vcpkg'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Export GitHub Actions Cache Environment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+
+      # 1. Get Cache
+      - name: Get Cache
+        uses: actions/cache@v4
+        with:
+          path: ~
+          key: build-${{ runner.os }}-${{ hashFiles('CMakeLists.txt') }}-${{ github.sha }}
+          restore-keys: build-${{ runner.os }}-${{ hashFiles('CMakeLists.txt') }}-
+
+      - name: Configure CMake
+        run: |
+          cd build
