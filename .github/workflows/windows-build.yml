@@ -1,5 +1,5 @@
 name: Windows Build (with Hello)
-on: [push, workflow_dispatch]
+on: [workflow_dispatch]
 
 jobs:
   build:
@@ -35,13 +35,8 @@ jobs:
       - name: Install Asciidoctor
         run: gem install asciidoctor
 
-      - name: Cache build
-        uses: actions/cache@v4
-        with:
-          path: build
-          key: build-${{ runner.os }}-${{ hashFiles('CMakeLists.txt') }}-${{ github.sha }}
-          restore-keys: build-${{ runner.os }}-${{ hashFiles('CMakeLists.txt') }}-        
-          
+      # 2. Configure with explicit Windows Targeting
+      - name: Configure CMake
         run: |
           mkdir build
           cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
@@ -53,4 +48,3 @@ jobs:
       - name: Build
         run: |
           cmake --build build --config Release --parallel
-
