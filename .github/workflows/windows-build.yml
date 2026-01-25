@@ -52,7 +52,6 @@ jobs:
             -DWITH_XC_SSHAGENT=OFF `
             -DWITH_XC_NETWORKING=OFF `
             -DDWITH_XC_KEESHARE=OFF `            
-            -DCMAKE_SYSTEM_VERSION=10.0.22621.0
 
       - name: Build
         run: |
