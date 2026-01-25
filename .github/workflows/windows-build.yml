@@ -35,6 +35,13 @@ jobs:
       - name: Install Asciidoctor
         run: gem install asciidoctor
 
+      - name: Cache build
+        uses: actions/cache@v4
+        with:
+          path: build
+          key: build-${{ runner.os }}-${{ hashFiles('CMakeLists.txt') }}-${{ github.sha }}
+          restore-keys: build-${{ runner.os }}-${{ hashFiles('CMakeLists.txt') }}-
+
       # 2. Configure with explicit Windows Targeting
       - name: Configure CMake
         run: |
