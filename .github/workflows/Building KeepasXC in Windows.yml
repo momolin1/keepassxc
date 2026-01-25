@@ -1,5 +1,5 @@
-name: KeePassXC Official Windows Build
-on: [push, workflow_dispatch]
+name: Building KeePassXC in Windows
+on: workflow_dispatch
 
 jobs:
   build:
@@ -23,7 +23,7 @@ jobs:
       - name: Get Cache
         uses: actions/cache@v4
         with:
-          path: ~
+          path: build
           key: build-${{ runner.os }}-${{ hashFiles('CMakeLists.txt') }}-${{ github.sha }}
           restore-keys: build-${{ runner.os }}-${{ hashFiles('CMakeLists.txt') }}-
 
