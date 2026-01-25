@@ -29,4 +29,12 @@ jobs:
 
       - name: Configure CMake
         run: |
-          cd build
+           cmake -G Ninja -S . -B build `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" `
+            -DWITH_XC_ALL=ON `
+            -DWITH_XC_SSHAGENT=OFF `
+            -DWITH_XC_NETWORKING=OFF `
+            -DDWITH_XC_KEESHARE=OFF `
+            -DCMAKE_SYSTEM_VERSION=10.0.22621.0
+
