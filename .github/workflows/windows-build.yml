@@ -1,5 +1,5 @@
-name: KeePassXC Official Windows Build
-on: workflow_dispatch
+name: Windows Build (with Hello)
+on: [push, workflow_dispatch]
 
 jobs:
   build:
@@ -19,17 +19,8 @@ jobs:
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
 
-      # 1. Prepare Environment (Asciidoctor is required for the build)
-      - name: Setup Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.2'
-      - name: Install Asciidoctor
-        run: gem install asciidoctor
-
-      # 2. Add WinRT Support (Necessary for Windows Hello)
-      # We inject 'cppwinrt' into the vcpkg manifest so the linker finds Hello symbols
-      - name: Add Windows Hello Support
+      # 1. Add cppwinrt to the manifest properly
+      - name: Add dependencies to Manifest
         run: |
           $manifest = Get-Content vcpkg.json | ConvertFrom-Json
           if ($manifest.dependencies -notcontains "cppwinrt") {
@@ -37,26 +28,29 @@ jobs:
           }
           $manifest | ConvertTo-Json -Depth 10 | Set-Content vcpkg.json
 
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+      - name: Install Asciidoctor
+        run: gem install asciidoctor
+
       - name: Cache build
         uses: actions/cache@v4
         with:
           path: build
           key: build-${{ runner.os }}-${{ hashFiles('CMakeLists.txt') }}-${{ github.sha }}
-          restore-keys: build-${{ runner.os }}-${{ hashFiles('CMakeLists.txt') }}-
-
-      # 3. Configure CMake using Ninja (as recommended in the wiki)
-      - name: Configure CMake
+          restore-keys: build-${{ runner.os }}-${{ hashFiles('CMakeLists.txt') }}-        
+          
         run: |
           mkdir build
-          cmake -G "Visual Studio 17 2022" -S . -B build `
-            -DCMAKE_BUILD_TYPE=Release `
-            -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" `
+          cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
+            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" `
             -DWITH_XC_ALL=ON `
-            -DWITH_XC_SSHAGENT=OFF `
-            -DWITH_XC_NETWORKING=OFF `
-            -DDWITH_XC_KEESHARE=OFF `
-           
+            -DWITH_XC_WINHELLO=ON `
+            -DCMAKE_SYSTEM_VERSION=10.0.22621.0
 
-      # Build using MSVC (via CMake build wrapper)
       - name: Build
-        run: cmake --build build --config Release --parallel 4
+        run: |
+          cmake --build build --config Release --parallel
+
