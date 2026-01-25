@@ -37,29 +37,13 @@ jobs:
           }
           $manifest | ConvertTo-Json -Depth 10 | Set-Content vcpkg.json
 
-      # 3. Configure CMake using Ninja (as recommended in the wiki)
+      - name: Cache build
+        uses: actions/cache@v4
+        with:
+          path: build
+          key: build-${{ runner.os }}-${{ hashFiles('CMakeLists.txt') }}-${{ github.sha }}
+          restore-keys: build-${{ runner.os }}-${{ hashFiles('CMakeLists.txt') }}-
+
       - name: Configure CMake
         run: |
           mkdir build
-          cmake -G Ninja -S . -B build `
-            -DCMAKE_BUILD_TYPE=Release `
-            -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" `
-            -DWITH_XC_ALL=ON `
-            -DCMAKE_SYSTEM_VERSION=10.0.22621.0
-
-      # 4. Build with Ninja
-      - name: Build
-        run: ninja -C build -j 4
-
-      # 5. Create the ZIP Package (Official CPack method)
-      - name: Package with CPack
-        run: |
-          cd build
-          cpack -G ZIP
-
-      # 6. Upload the final .zip
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: KeePassXC-Windows-Official
-          path: build/*.zip
