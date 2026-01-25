@@ -44,7 +44,7 @@ jobs:
           cmake -G Ninja -S . -B build `
             -DCMAKE_BUILD_TYPE=Release `
             -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" `
- 	    -DWITH_XC_ALL=ON `
+            -DWITH_XC_ALL=ON `
             -DWITH_XC_SSHAGENT=OFF `
             -DWITH_XC_NETWORKING=OFF `
             -DDWITH_XC_KEESHARE=OFF `
