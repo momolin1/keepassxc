@@ -28,6 +28,13 @@ jobs:
           }
           $manifest | ConvertTo-Json -Depth 10 | Set-Content vcpkg.json
 
+      - name: Cache vcpkg root
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.VCPKG_ROOT }}
+          key: vcpkg-${{ hashFiles('vcpkg.json') }}-${{ runner.os }}
+          restore-keys: vcpkg-${{ runner.os }}-
+
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
@@ -53,6 +60,3 @@ jobs:
             -DWITH_XC_NETWORKING=OFF `
             -DDWITH_XC_KEESHARE=OFF `            
 
-      - name: Build
-        run: |
-          cmake --build build --config Release --parallel
