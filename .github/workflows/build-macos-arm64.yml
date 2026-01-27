@@ -1,4 +1,4 @@
-name: Build KeePassXC 2.7.11 macOS x86_64
+name: Build KeePassXC 2.7.11 macOS ARM64 (M4 - Custom)
 
 on:
   push:
@@ -11,8 +11,8 @@ env:
   BUILD_TYPE: Release
 
 jobs:
-  build-macos:
-    runs-on: macos-14  # x86_64 (Intel), supported until 2027
+  build-arm64:
+    runs-on: macos-15-arm64  # M-series ARM64
 
     steps:
     - name: Checkout stable 2.7.11
@@ -21,24 +21,24 @@ jobs:
         ref: 2.7.11
         submodules: recursive
 
-    # CACHE 1: Homebrew (95% faster)
+    # CACHE: Homebrew
     - name: Cache Homebrew
       id: cache-homebrew
       uses: actions/cache@v4
       with:
         path: /usr/local/Homebrew
-        key: homebrew-macos14-${{ hashFiles('**/CMakeLists.txt') }}
-        restore-keys: homebrew-macos14-
+        key: homebrew-arm64-custom-${{ hashFiles('**/CMakeLists.txt') }}
+        restore-keys: homebrew-arm64-custom-
 
     - name: Update Homebrew (if cache miss)
       if: steps.cache-homebrew.outputs.cache-hit != 'true'
       run: brew update
 
-    - name: Install Homebrew dependencies (cached)
+    - name: Install ARM64 deps
       run: |
-        brew install cmake asciidoctor qt@5 argon2 botan qrencode readline minizip || true
+        brew install cmake asciidoctor qt@6 argon2 botan qrencode yubikey-personalization libyubikey readline minizip || true
 
-    # CACHE 2: CMake + build
+    # CACHE: Build
     - name: Cache CMake build
       uses: actions/cache@v4
       with:
@@ -46,41 +46,48 @@ jobs:
           build/
           !build/*.dmg
           !build/*.zip
-        key: macos14-cmake-${{ hashFiles('**/CMakeLists.txt', 'cmake/**') }}-${{ env.BUILD_TYPE }}
-        restore-keys: macos14-cmake-${{ env.BUILD_TYPE }}-
+        key: arm64-custom-${{ hashFiles('**/CMakeLists.txt') }}-${{ env.BUILD_TYPE }}
+        restore-keys: arm64-custom-
 
-    - name: Configure CMake (your minimal flags)
+    - name: Configure CMake (**YOUR EXACT FLAGS**)
       run: |
         mkdir -p build
         cd build
         cmake .. \
           -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
-          -DCMAKE_OSX_ARCHITECTURES=x86_64 \
-          -DWITH_XC_ALL=ON \
+          -DCMAKE_OSX_ARCHITECTURES=arm64 \
+          -DCMAKE_OSX_DEPLOYMENT_TARGET=14.0 \
+          -DWITH_XC_ALL=OFF \
+          -DWITH_XC_AUTOTYPE=ON \
+          -DWITH_XC_BROWSER=ON \
+          -DWITH_XC_BROWSER_PASSKEYS=ON \
+          -DWITH_XC_YUBIKEY=ON \
           -DWITH_XC_NETWORKING=OFF \
+          -DWITH_XC_UPDATECHECK=OFF \
+          -DWITH_XC_SSHAGENT=OFF \
           -DWITH_XC_KEESHARE=OFF \
           -DWITH_APP_BUNDLE=ON \
-          -DCMAKE_PREFIX_PATH="$(brew --prefix qt@5)"
+          -DCMAKE_PREFIX_PATH="$(brew --prefix qt@6)"
         cd ..
 
     - name: Build + Package DMG
       run: |
         cd build
         cmake --build . --parallel $(sysctl -n hw.ncpu)
-        make package  # DMG
+        make package
 
     - name: Package portable ZIP
       run: |
         cd build
         mkdir -p package
         cp -R src/*.app package/
-        ditto -c -k --sequesterRsrc --keepParent package "KeePassXC-2.7.11-macOS-x86_64.zip"
+        ditto -c -k --sequesterRsrc --keepParent package "KeePassXC-2.7.11-macOS-arm64-Custom.zip"
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: KeePassXC-2.7.11-macOS-x86_64
+        name: KeePassXC-2.7.11-macOS-arm64-Custom
         path: |
           build/*.dmg
-          build/KeePassXC-2.7.11-macOS-x86_64.zip
+          build/KeePassXC-2.7.11-macOS-arm64-Custom.zip
         retention-days: 30
