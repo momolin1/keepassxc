@@ -15,29 +15,28 @@ jobs:
         with:
           ref: 2.7.11
 
-      # CACHE 1: vcpkg (installs ~20min → 1min)
+      # CACHE: vcpkg (~25min → 1min)
       - name: Cache vcpkg
-        id: cache-vcpkg
         uses: actions/cache@v4
         with:
           path: ${{ env.VCPKG_ROOT }}
-          key: vcpkg-win-${{ hashFiles('vcpkg.json') }}-${{ runner.os }}
+          key: vcpkg-win-${{ hashFiles('**/vcpkg.json') }}
           restore-keys: vcpkg-win-
 
-      - name: Setup vcpkg (**cached**)
+      # vcpkg: NO commit ID (latest stable)
+      - name: Setup vcpkg
         uses: lukka/run-vcpkg@v11
         with:
-          vcpkgDirectory: ${{ env.VCP_ROOT }}
-          vcpkgGitCommitId: '2025-01-01'
+          vcpkgDirectory: ${{ env.VCPKG_ROOT }}
 
-      - name: Install deps (**vcpkg cached**)
-        if: steps.cache-vcpkg.outputs.cache-hit != 'true'
+      # Install deps (cached)
+      - name: Install deps
         run: |
-          vcpkg install --triplet x64-windows `
-            qt5-base qt5-svg qt5-tools libgcrypt libargon2 libqrencode Botan yubico-piv-tool `
+          vcpkg install --triplet x64-windows ^
+            qt5-base qt5-svg qt5-tools libgcrypt libargon2 libqrencode Botan yubico-piv-tool ^
             --feature-flags=manifests
 
-      # CACHE 2: CMake build (~40min → 5min)
+      # CACHE: Build (~35min → 5min)
       - name: Cache build
         uses: actions/cache@v4
         with:
@@ -46,26 +45,26 @@ jobs:
             !build/*.exe
             !build/*.dll
             !build/*.zip
-          key: win-build-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-${{ env.BUILD_TYPE }}
-          restore-keys: win-build-${{ env.BUILD_TYPE }}-
+          key: win-build-${{ hashFiles('CMakeLists.txt') }}-${{ github.sha }}
+          restore-keys: win-build-
 
-      - name: Configure CMake (**YOUR FLAGS**)
+      - name: Configure CMake (YOUR FLAGS)
         run: |
-          cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
-            -DCMAKE_TOOLCHAIN_FILE="${{ env.VCPKG_ROOT }}\scripts\buildsystems\vcpkg.cmake" `
-            -DCMAKE_BUILD_TYPE=Release `
-            -DWITH_XC_ALL=OFF `
-            -DWITH_XC_AUTOTYPE=ON `
-            -DWITH_XC_BROWSER=ON `
-            -DWITH_XC_BROWSER_PASSKEYS=ON `
-            -DWITH_XC_YUBIKEY=ON `
-            -DWITH_XC_NETWORKING=OFF `
-            -DWITH_XC_UPDATECHECK=OFF `
-            -DWITH_XC_SSHAGENT=OFF `
-            -DWITH_XC_KEESHARE=OFF `
+          cmake -S . -B build -G "Visual Studio 17 2022" -A x64 ^
+            -DCMAKE_TOOLCHAIN_FILE="${{ env.VCPKG_ROOT }}\scripts\buildsystems\vcpkg.cmake" ^
+            -DCMAKE_BUILD_TYPE=Release ^
+            -DWITH_XC_ALL=OFF ^
+            -DWITH_XC_AUTOTYPE=ON ^
+            -DWITH_XC_BROWSER=ON ^
+            -DWITH_XC_BROWSER_PASSKEYS=ON ^
+            -DWITH_XC_YUBIKEY=ON ^
+            -DWITH_XC_NETWORKING=OFF ^
+            -DWITH_XC_UPDATECHECK=OFF ^
+            -DWITH_XC_SSHAGENT=OFF ^
+            -DWITH_XC_KEESHARE=OFF ^
             -DWITH_APP_BUNDLE=ON
 
-      - name: Build (**sequential**)
+      - name: Build (sequential)
         run: cmake --build build --config Release
 
       - name: Package clean ZIP
