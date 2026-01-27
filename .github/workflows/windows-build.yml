@@ -52,13 +52,18 @@ jobs:
       # 2. Configure with explicit Windows Targeting
       - name: Configure CMake
         run: |
-          if (-not (Test-Path build)) {
-            mkdir build
-          }
+          cmake -E make_directory build
           cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
             -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" `
-            -DWITH_XC_ALL=ON `
-            -DWITH_XC_SSHAGENT=OFF `
-            -DWITH_XC_NETWORKING=OFF `
-            -DDWITH_XC_KEESHARE=OFF `            
 
+            -DCMAKE_BUILD_TYPE=Release `
+            -DWITH_XC_ALL=OFF `
+            -DWITH_XC_AUTOTYPE=ON `
+            -DWITH_XC_BROWSER=ON `
+            -DWITH_XC_BROWSER_PASSKEYS=ON `
+            -DWITH_XC_YUBIKEY=ON `
+            -DWITH_XC_NETWORKING=OFF `
+            -DWITH_XC_UPDATECHECK=OFF `
+            -DWITH_XC_SSHAGENT=OFF `
+            -DWITH_XC_KEESHARE=OFF `
+            ..
