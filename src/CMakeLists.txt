@@ -272,7 +272,7 @@ if(WIN32)
             gui/osutils/winutils/ScreenLockListenerWin.cpp
             gui/osutils/winutils/WinUtils.cpp)
     if (WINSDK)
-        list(APPEND gui_SOURCES quickunlock/WindowsHello.cpp)
+        list(APPEND core_SOURCES quickunlock/WindowsHello.cpp)
     endif()
 endif()
 
