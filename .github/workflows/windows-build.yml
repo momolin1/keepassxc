@@ -42,12 +42,12 @@ jobs:
       - name: Install Asciidoctor
         run: gem install asciidoctor
 
-     # - name: Cache build
-     #   uses: actions/cache@v4
-     #    with:
-     #     path: build
-     #     key: build-${{ runner.os }}-${{ hashFiles('CMakeLists.txt') }}-${{ github.sha }}
-     #     restore-keys: build-${{ runner.os }}-${{ hashFiles('CMakeLists.txt') }}-
+      - name: Cache build
+        uses: actions/cache@v4
+         with:
+          path: build
+          key: build-${{ runner.os }}-${{ hashFiles('CMakeLists.txt') }}-${{ github.sha }}
+          restore-keys: build-${{ runner.os }}-${{ hashFiles('CMakeLists.txt') }}-
 
       # 2. Configure with explicit Windows Targeting
       - name: Configure CMake
@@ -67,5 +67,6 @@ jobs:
             -DWITH_XC_KEESHARE=OFF
             
       - name: Build
-        run: cmake --build build --config Release --parallel
+        # run: cmake --build build --config Release --parallel
+        run: cmake --build build --config Release --verbose
         
