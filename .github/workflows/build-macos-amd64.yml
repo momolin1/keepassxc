@@ -1,0 +1,94 @@
+name: Build KeePassXC 2.7.11 macOS x86_64
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  build-macos:
+    runs-on: macos-13
+
+    steps:
+    - name: Checkout **stable 2.7.11**
+      uses: actions/checkout@v4
+      with:
+        ref: 2.7.11
+        submodules: recursive
+
+    # **CACHE 1: Homebrew** (biggest speedup)
+    - name: Cache Homebrew
+      id: cache-homebrew
+      uses: actions/cache@v4
+      with:
+        path: /usr/local/Homebrew
+        key: homebrew-${{ runner.os }}-${{ hashFiles('/usr/local/Homebrew/Library/Taps/homebrew/homebrew-core/PinnedPackages/*.json') }}
+        restore-keys: homebrew-${{ runner.os }}-
+
+    - name: Update Homebrew (if cache miss)
+      if: steps.cache-homebrew.outputs.cache-hit != 'true'
+      run: brew update
+
+    - name: Install Homebrew dependencies (**cached**)
+      run: |
+        brew install cmake asciidoctor qt@5 argon2 botan qrencode readline minizip || true
+
+    # **CACHE 2: CMake build** 
+    - name: Cache CMake build
+      uses: actions/cache@v4
+      with:
+        path: |
+          build/
+          !build/*.dmg
+          !build/*.zip
+        key: ${{ runner.os }}-cmake-${{ hashFiles('**/CMakeLists.txt', 'cmake/**') }}-${{ env.BUILD_TYPE }}
+        restore-keys: ${{ runner.os }}-cmake-${{ env.BUILD_TYPE }}-
+
+    # **CACHE 3: vcpkg-like deps** (Qt libs)
+    - name: Cache Qt dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          /usr/local/opt/qt@5/lib/cmake/
+          ~/.cmake/
+        key: ${{ runner.os }}-qt5-${{ hashFiles('**/CMakeLists.txt') }}
+
+    - name: Configure CMake (**your minimal flags**)
+      run: |
+        mkdir -p build
+        cd build
+        cmake .. \
+          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+          -DCMAKE_OSX_ARCHITECTURES=x86_64 \
+          -DWITH_XC_ALL=ON \
+          -DWITH_XC_NETWORKING=OFF \
+          -DWITH_XC_KEESHARE=OFF \
+          -DWITH_APP_BUNDLE=ON \
+          -DCMAKE_PREFIX_PATH="$(brew --prefix qt@5)"
+        cd ..
+
+    - name: Build + Package DMG
+      run: |
+        cd build
+        cmake --build . --parallel $(sysctl -n hw.ncpu)
+
+    - name: Package portable ZIP
+      run: |
+        cd build
+        mkdir -p package
+        cp -R src/*.app package/
+        ditto -c -k --sequesterRsrc --keepParent package "KeePassXC-2.7.11-macOS-x86_64.zip"
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: KeePassXC-2.7.11-macOS-x86_64
+        path: |
+          build/*.dmg
+          build/KeePassXC-2.7.11-macOS-x86_64.zip
+        retention-days: 30
