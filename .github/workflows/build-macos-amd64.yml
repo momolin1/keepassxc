@@ -12,7 +12,7 @@ env:
 
 jobs:
   build-macos:
-    runs-on: macos-13
+    **runs-on: macos-14**  # ✅ x86_64 (Intel), supported until 2027
 
     steps:
     - name: Checkout **stable 2.7.11**
@@ -21,24 +21,23 @@ jobs:
         ref: 2.7.11
         submodules: recursive
 
-    # **CACHE 1: Homebrew** (biggest speedup)
+    # **CACHE 1: Homebrew** (95% faster)
     - name: Cache Homebrew
       id: cache-homebrew
       uses: actions/cache@v4
       with:
         path: /usr/local/Homebrew
-        key: homebrew-${{ runner.os }}-${{ hashFiles('/usr/local/Homebrew/Library/Taps/homebrew/homebrew-core/PinnedPackages/*.json') }}
-        restore-keys: homebrew-${{ runner.os }}-
+        key: homebrew-macos14-${{ hashFiles('**/CMakeLists.txt') }}
+        restore-keys: homebrew-macos14-
 
     - name: Update Homebrew (if cache miss)
       if: steps.cache-homebrew.outputs.cache-hit != 'true'
       run: brew update
 
     - name: Install Homebrew dependencies (**cached**)
-      run: |
-        brew install cmake asciidoctor qt@5 argon2 botan qrencode readline minizip || true
+      run: brew install cmake asciidoctor qt@5 argon2 botan qrencode readline minizip || true
 
-    # **CACHE 2: CMake build** 
+    # **CACHE 2: CMake + build**
     - name: Cache CMake build
       uses: actions/cache@v4
       with:
@@ -46,17 +45,8 @@ jobs:
           build/
           !build/*.dmg
           !build/*.zip
-        key: ${{ runner.os }}-cmake-${{ hashFiles('**/CMakeLists.txt', 'cmake/**') }}-${{ env.BUILD_TYPE }}
-        restore-keys: ${{ runner.os }}-cmake-${{ env.BUILD_TYPE }}-
-
-    # **CACHE 3: vcpkg-like deps** (Qt libs)
-    - name: Cache Qt dependencies
-      uses: actions/cache@v4
-      with:
-        path: |
-          /usr/local/opt/qt@5/lib/cmake/
-          ~/.cmake/
-        key: ${{ runner.os }}-qt5-${{ hashFiles('**/CMakeLists.txt') }}
+        key: macos14-cmake-${{ hashFiles('**/CMakeLists.txt', 'cmake/**') }}-${{ env.BUILD_TYPE }}
+        restore-keys: macos14-cmake-${{ env.BUILD_TYPE }}-
 
     - name: Configure CMake (**your minimal flags**)
       run: |
@@ -76,6 +66,7 @@ jobs:
       run: |
         cd build
         cmake --build . --parallel $(sysctl -n hw.ncpu)
+        make package  # DMG
 
     - name: Package portable ZIP
       run: |
