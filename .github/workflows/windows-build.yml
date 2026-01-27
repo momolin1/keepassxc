@@ -1,4 +1,5 @@
-name: Windows Build (with Hello)
+name: Windows Build (Custom + Cache)
+
 on: [workflow_dispatch]
 
 jobs:
@@ -9,52 +10,49 @@ jobs:
       VCPKG_ROOT: 'C:\vcpkg'
 
     steps:
-      - name: Checkout code
+      - name: Checkout stable 2.7.11
         uses: actions/checkout@v4
-
-      - name: Export GitHub Actions Cache Environment
-        uses: actions/github-script@v7
         with:
-          script: |
-            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
-            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+          ref: 2.7.11
 
-      # 1. Add cppwinrt to the manifest properly
-      - name: Add dependencies to Manifest
-        run: |
-          $manifest = Get-Content vcpkg.json | ConvertFrom-Json
-          if ($manifest.dependencies -notcontains "cppwinrt") {
-              $manifest.dependencies += "cppwinrt"
-          }
-          $manifest | ConvertTo-Json -Depth 10 | Set-Content vcpkg.json
-
-      - name: Cache vcpkg root
+      # CACHE 1: vcpkg (installs ~20min → 1min)
+      - name: Cache vcpkg
+        id: cache-vcpkg
         uses: actions/cache@v4
         with:
           path: ${{ env.VCPKG_ROOT }}
-          key: vcpkg-${{ hashFiles('vcpkg.json') }}-${{ runner.os }}
-          restore-keys: vcpkg-${{ runner.os }}-
+          key: vcpkg-win-${{ hashFiles('vcpkg.json') }}-${{ runner.os }}
+          restore-keys: vcpkg-win-
 
-      - name: Setup Ruby
-        uses: ruby/setup-ruby@v1
+      - name: Setup vcpkg (**cached**)
+        uses: lukka/run-vcpkg@v11
         with:
-          ruby-version: '3.2'
-      - name: Install Asciidoctor
-        run: gem install asciidoctor
+          vcpkgDirectory: ${{ env.VCP_ROOT }}
+          vcpkgGitCommitId: '2025-01-01'
 
+      - name: Install deps (**vcpkg cached**)
+        if: steps.cache-vcpkg.outputs.cache-hit != 'true'
+        run: |
+          vcpkg install --triplet x64-windows `
+            qt5-base qt5-svg qt5-tools libgcrypt libargon2 libqrencode Botan yubico-piv-tool `
+            --feature-flags=manifests
+
+      # CACHE 2: CMake build (~40min → 5min)
       - name: Cache build
         uses: actions/cache@v4
         with:
-          path: build
-          key: build-${{ runner.os }}-${{ hashFiles('CMakeLists.txt') }}-${{ github.sha }}
-          restore-keys: build-${{ runner.os }}-${{ hashFiles('CMakeLists.txt') }}-
+          path: |
+            build/
+            !build/*.exe
+            !build/*.dll
+            !build/*.zip
+          key: win-build-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-${{ env.BUILD_TYPE }}
+          restore-keys: win-build-${{ env.BUILD_TYPE }}-
 
-      # 2. Configure with explicit Windows Targeting
-      - name: Configure CMake
+      - name: Configure CMake (**YOUR FLAGS**)
         run: |
-          cmake -E make_directory build
           cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
-            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" `
+            -DCMAKE_TOOLCHAIN_FILE="${{ env.VCPKG_ROOT }}\scripts\buildsystems\vcpkg.cmake" `
             -DCMAKE_BUILD_TYPE=Release `
             -DWITH_XC_ALL=OFF `
             -DWITH_XC_AUTOTYPE=ON `
@@ -64,9 +62,21 @@ jobs:
             -DWITH_XC_NETWORKING=OFF `
             -DWITH_XC_UPDATECHECK=OFF `
             -DWITH_XC_SSHAGENT=OFF `
-            -DWITH_XC_KEESHARE=OFF
-            
-      - name: Build
-        # run: cmake --build build --config Release --parallel
-        run: cmake --build build --config Release --verbose
-        
+            -DWITH_XC_KEESHARE=OFF `
+            -DWITH_APP_BUNDLE=ON
+
+      - name: Build (**sequential**)
+        run: cmake --build build --config Release
+
+      - name: Package clean ZIP
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem build\src\Release\* -Include *.exe,*.dll,qt.conf,platforms -Recurse | 
+                   Where { $_.Name -notmatch '\.(lib|exp|pdb)$' }
+          Compress-Archive $files.FullName "KeePassXC-2.7.11-Win64-Custom.zip"
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: KeePassXC-2.7.11-Win64-Custom
+          path: KeePassXC-2.7.11-Win64-Custom.zip
