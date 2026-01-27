@@ -1,4 +1,4 @@
-name: Build KeePassXC 2.7.11 macOS ARM64
+name: Build KeePassXC 2.7.11 macOS ARM64 (M4 - Custom)
 
 on:
   push:
@@ -12,7 +12,7 @@ env:
 
 jobs:
   build-arm64:
-    runs-on: macos-latest  # M-series ARM64
+    runs-on: macos-latest
 
     steps:
     - name: Checkout stable 2.7.11
@@ -27,16 +27,16 @@ jobs:
       uses: actions/cache@v4
       with:
         path: /usr/local/Homebrew
-        key: homebrew-arm64-custom-${{ hashFiles('**/CMakeLists.txt') }}
-        restore-keys: homebrew-arm64-custom-
+        key: homebrew-macos-latest-custom-${{ hashFiles('**/CMakeLists.txt') }}
+        restore-keys: homebrew-macos-latest-custom-
 
     - name: Update Homebrew (if cache miss)
       if: steps.cache-homebrew.outputs.cache-hit != 'true'
       run: brew update
 
-    - name: Install ARM64 deps
+    - name: Install Qt5 + deps
       run: |
-        brew install cmake asciidoctor qt@6 argon2 botan qrencode yubikey-personalization libyubikey readline minizip || true
+        brew install cmake asciidoctor qt@5 argon2 Botan qrencode yubikey-personalization libyubikey readline minizip || true
 
     # CACHE: Build
     - name: Cache CMake build
@@ -46,10 +46,10 @@ jobs:
           build/
           !build/*.dmg
           !build/*.zip
-        key: arm64-custom-${{ hashFiles('**/CMakeLists.txt') }}-${{ env.BUILD_TYPE }}
-        restore-keys: arm64-custom-
+        key: macos-latest-custom-qt5-${{ hashFiles('**/CMakeLists.txt') }}-${{ env.BUILD_TYPE }}
+        restore-keys: macos-latest-custom-qt5-
 
-    - name: Configure CMake (**YOUR EXACT FLAGS**)
+    - name: Configure CMake (YOUR FLAGS + Qt5)
       run: |
         mkdir -p build
         cd build
@@ -67,7 +67,7 @@ jobs:
           -DWITH_XC_SSHAGENT=OFF \
           -DWITH_XC_KEESHARE=OFF \
           -DWITH_APP_BUNDLE=ON \
-          -DCMAKE_PREFIX_PATH="$(brew --prefix qt@6)"
+          -DCMAKE_PREFIX_PATH="$(brew --prefix qt@5)/lib/cmake"
         cd ..
 
     - name: Build + Package DMG
