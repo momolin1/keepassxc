@@ -1,4 +1,4 @@
-name: Build KeePassXC 2.7.11 macOS ARM64 (M4 - Custom)
+name: Build KeePassXC 2.7.11 macOS ARM64
 
 on:
   push:
@@ -12,7 +12,7 @@ env:
 
 jobs:
   build-arm64:
-    runs-on: macos-15-arm64  # M-series ARM64
+    runs-on: macos-latest  # M-series ARM64
 
     steps:
     - name: Checkout stable 2.7.11
