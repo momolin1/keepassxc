@@ -1,13 +1,10 @@
-name: Windows Build (Custom + Cache)
+name: Windows Build (Custom + Cache - Simple vcpkg)
 
 on: [workflow_dispatch]
 
 jobs:
   build:
     runs-on: windows-latest
-    env:
-      VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
-      VCPKG_ROOT: 'C:\vcpkg'
 
     steps:
       - name: Checkout stable 2.7.11
@@ -15,26 +12,22 @@ jobs:
         with:
           ref: 2.7.11
 
-      # CACHE: vcpkg (~25min → 1min)
+      # CACHE 1: vcpkg (~25min → 1min)
       - name: Cache vcpkg
         uses: actions/cache@v4
+        id: cache-vcpkg
         with:
-          path: ${{ env.VCPKG_ROOT }}
-          key: vcpkg-win-${{ hashFiles('**/vcpkg.json') }}
+          path: C:\vcpkg
+          key: vcpkg-win-${{ hashFiles('CMakeLists.txt') }}
           restore-keys: vcpkg-win-
 
-      # vcpkg: NO commit ID (latest stable)
-      - name: Setup vcpkg
-        uses: lukka/run-vcpkg@v11
-        with:
-          vcpkgDirectory: ${{ env.VCPKG_ROOT }}
-
-      # Install deps (cached)
-      - name: Install deps
+      - name: Setup vcpkg (manual)
+        if: steps.cache-vcpkg.outputs.cache-hit != 'true'
+        shell: pwsh
         run: |
-          vcpkg install --triplet x64-windows ^
-            qt5-base qt5-svg qt5-tools libgcrypt libargon2 libqrencode Botan yubico-piv-tool ^
-            --feature-flags=manifests
+          git clone https://github.com/Microsoft/vcpkg.git C:\vcpkg
+          . C:\vcpkg\bootstrap-vcpkg.bat
+          vcpkg install --triplet x64-windows qt5-base qt5-svg qt5-tools libgcrypt libargon2 libqrencode Botan yubico-piv-tool
 
       # CACHE: Build (~35min → 5min)
       - name: Cache build
