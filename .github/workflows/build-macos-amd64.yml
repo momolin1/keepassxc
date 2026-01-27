@@ -12,16 +12,16 @@ env:
 
 jobs:
   build-macos:
-    **runs-on: macos-14**  # ✅ x86_64 (Intel), supported until 2027
+    runs-on: macos-14  # x86_64 (Intel), supported until 2027
 
     steps:
-    - name: Checkout **stable 2.7.11**
+    - name: Checkout stable 2.7.11
       uses: actions/checkout@v4
       with:
         ref: 2.7.11
         submodules: recursive
 
-    # **CACHE 1: Homebrew** (95% faster)
+    # CACHE 1: Homebrew (95% faster)
     - name: Cache Homebrew
       id: cache-homebrew
       uses: actions/cache@v4
@@ -34,10 +34,11 @@ jobs:
       if: steps.cache-homebrew.outputs.cache-hit != 'true'
       run: brew update
 
-    - name: Install Homebrew dependencies (**cached**)
-      run: brew install cmake asciidoctor qt@5 argon2 botan qrencode readline minizip || true
+    - name: Install Homebrew dependencies (cached)
+      run: |
+        brew install cmake asciidoctor qt@5 argon2 botan qrencode readline minizip || true
 
-    # **CACHE 2: CMake + build**
+    # CACHE 2: CMake + build
     - name: Cache CMake build
       uses: actions/cache@v4
       with:
@@ -48,7 +49,7 @@ jobs:
         key: macos14-cmake-${{ hashFiles('**/CMakeLists.txt', 'cmake/**') }}-${{ env.BUILD_TYPE }}
         restore-keys: macos14-cmake-${{ env.BUILD_TYPE }}-
 
-    - name: Configure CMake (**your minimal flags**)
+    - name: Configure CMake (your minimal flags)
       run: |
         mkdir -p build
         cd build
