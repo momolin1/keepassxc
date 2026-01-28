@@ -1,4 +1,4 @@
-name: Build KeePassXC 2.7.11 Windows x64 (Custom - No Cache, Asciidoctor)
+name: Build KeePassXC 2.7.11 Windows x64 (Your Features - MSVC)
 
 on:
   push:
@@ -22,7 +22,7 @@ jobs:
         ref: 2.7.11
         submodules: recursive
 
-    # Install Ruby + Asciidoctor (for documentation)
+    # Ruby/Asciidoctor (for browser integration docs)
     - name: Install Ruby
       uses: ruby/setup-ruby@v1
       with:
@@ -30,9 +30,17 @@ jobs:
 
     - name: Install Asciidoctor
       shell: pwsh
+      run: gem install asciidoctor
+
+    # Force MSVC + Ninja (no MinGW)
+    - name: Setup MSVC
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Install Ninja
+      shell: pwsh
       run: |
-        gem install asciidoctor
-        asciidoctor --version
+        choco install ninja -y
+        echo "C:\tools\ninja" | Out-File -Append -FilePath $env:GITHUB_PATH -Encoding utf8
 
     - name: Install vcpkg
       shell: pwsh
@@ -45,22 +53,31 @@ jobs:
       shell: pwsh
       run: ${{ env.VCPKG_ROOT }}\vcpkg install --triplet x64-windows
 
-    - name: Configure CMake
+    - name: Configure CMake (Your exact flags)
+      shell: pwsh
       run: |
         mkdir build
         cd build
         cmake .. `
           -G "Ninja" `
+          -T v140_xp `
           -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} `
           -DCMAKE_TOOLCHAIN_FILE=${{ env.VCPKG_ROOT }}\scripts\buildsystems\vcpkg.cmake `
           -DVCPKG_TARGET_TRIPLET=x64-windows `
           -DWITH_XC_ALL=OFF `
+          -DWITH_XC_AUTOTYPE=ON `
+          -DWITH_XC_BROWSER=ON `
+          -DWITH_XC_BROWSER_PASSKEYS=ON `
+          -DWITH_XC_YUBIKEY=ON `
           -DWITH_XC_NETWORKING=OFF `
+          -DWITH_XC_UPDATECHECK=OFF `
           -DWITH_XC_SSHAGENT=OFF `
           -DWITH_XC_KEESHARE=OFF `
-          -DWITH_TESTS=OFF
+          -DWITH_TESTS=OFF `
+          -DASCIIDCTOR_EXECUTABLE=asciidoctor
 
     - name: Build
+      shell: pwsh
       run: |
         cd build
         cmake --build . --config ${{ env.BUILD_TYPE }}
@@ -71,7 +88,7 @@ jobs:
         cd build
         mkdir package
         copy src\KeePassXC.exe package\
-        copy src\*.dll package\
+        xcopy /s /y src\*.dll package\  # Qt/YubiKey DLLs
         Compress-Archive -Path package\* -DestinationPath KeePassXC-2.7.11-Win64-Custom.zip
 
     - name: Upload artifact
