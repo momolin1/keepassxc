@@ -1,19 +1,18 @@
-name: Build KeePassXC 2.7.11 Windows x64 (Fixed vcpkg + VS)
+name: Build KeePassXC 2.7.11 Windows x64 (vcpkg Fixed + VS)
 
 on: [workflow_dispatch]
 
 jobs:
   build:
-    runs-on: windows-latest  # = windows-2025 ok
+    runs-on: windows-latest
 
     steps:
-    - name: Checkout 2.7.11
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
       with:
         ref: 2.7.11
         submodules: recursive
 
-    # vcpkg cache/setup (always safe)
+    # Safe vcpkg (cmd for bat)
     - name: Cache vcpkg
       id: cache-vcpkg
       uses: actions/cache@v4
@@ -22,25 +21,27 @@ jobs:
         key: vcpkg-keepassxc-${{ hashFiles('CMakeLists.txt') }}
 
     - name: Setup vcpkg
-      shell: pwsh
+      shell: cmd
       run: |
-        if (!(Test-Path C:\vcpkg\vcpkg.exe) -or !(Test-Path C:\vcpkg\installed)) {
-          Remove-Item -Recurse -Force C:\vcpkg -ErrorAction SilentlyContinue
+        if not exist C:\vcpkg\vcpkg.exe (
+          rmdir /s /q C:\vcpkg
           git clone https://github.com/Microsoft/vcpkg.git C:\vcpkg
-          .\C:\vcpkg\bootstrap-vcpkg.bat
-        }
-        C:\vcpkg\vcpkg.exe install --triplet x64-windows `
-          qt5-base[core,svg,tools] `
-          libgcrypt libargon2 libqrencode botan
+          call C:\vcpkg\bootstrap-vcpkg.bat
+        )
+        C:\vcpkg\vcpkg.exe install --triplet x64-windows ^
+          qt5-base[core,svg,tools] ^
+          libgcrypt libargon2 libqrencode botan ^
+          yubico-piv-tool argon2
 
-    # Build cache
+    # Build steps same
     - name: Cache build
       uses: actions/cache@v4
       with:
         path: build
         key: build-vs-${{ hashFiles('CMakeLists.txt') }}
 
-    - name: Configure CMake
+    - name: Configure
+      shell: cmd
       run: |
         cmake -B build ^
           -G "Visual Studio 17 2022" ^
@@ -57,19 +58,4 @@ jobs:
           -DWITH_XC_KEESHARE=OFF ^
           -DWITH_XC_YUBIKEY=OFF
 
-    - name: Build
-      run: cmake --build build --config Release /maxcpucount:4
 
-    - name: Package ZIP
-      shell: pwsh
-      run: |
-        mkdir dist | Out-Null
-        Copy-Item build\Release\KeePassXC.exe dist\ | Out-Null
-        Copy-Item build\Release\*.dll dist\ -ErrorAction SilentlyContinue
-        Compress-Archive dist KeePassXC-2.7.11-Win64-Fixed.zip -Force
-
-    - name: Upload
-      uses: actions/upload-artifact@v4
-      with:
-        name: KeePassXC-2.7.11-Win64-Fixed
-        path: KeePassXC-2.7.11-Win64-Fixed.zip
