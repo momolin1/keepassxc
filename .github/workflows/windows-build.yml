@@ -1,4 +1,4 @@
-name: Build KeePassXC 2.7.11 Windows x64 (Your Features - MSVC)
+name: Build KeePassXC 2.7.11 Windows x64 (Your Features - Fixed MSVC)
 
 on:
   push:
@@ -22,7 +22,7 @@ jobs:
         ref: 2.7.11
         submodules: recursive
 
-    # Ruby/Asciidoctor (for browser integration docs)
+    # Asciidoctor (browser/docs)
     - name: Install Ruby
       uses: ruby/setup-ruby@v1
       with:
@@ -32,15 +32,9 @@ jobs:
       shell: pwsh
       run: gem install asciidoctor
 
-    # Force MSVC + Ninja (no MinGW)
-    - name: Setup MSVC
+    # Setup MSVC developer command prompt
+    - name: Setup MSBuild
       uses: microsoft/setup-msbuild@v2
-
-    - name: Install Ninja
-      shell: pwsh
-      run: |
-        choco install ninja -y
-        echo "C:\tools\ninja" | Out-File -Append -FilePath $env:GITHUB_PATH -Encoding utf8
 
     - name: Install vcpkg
       shell: pwsh
@@ -53,14 +47,14 @@ jobs:
       shell: pwsh
       run: ${{ env.VCPKG_ROOT }}\vcpkg install --triplet x64-windows
 
-    - name: Configure CMake (Your exact flags)
+    - name: Configure CMake (Visual Studio generator + your flags)
       shell: pwsh
       run: |
         mkdir build
         cd build
         cmake .. `
-          -G "Ninja" `
-          -T v140_xp `
+          -G "Visual Studio 17 2022" `
+          -A x64 `
           -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} `
           -DCMAKE_TOOLCHAIN_FILE=${{ env.VCPKG_ROOT }}\scripts\buildsystems\vcpkg.cmake `
           -DVCPKG_TARGET_TRIPLET=x64-windows `
@@ -80,15 +74,15 @@ jobs:
       shell: pwsh
       run: |
         cd build
-        cmake --build . --config ${{ env.BUILD_TYPE }}
+        cmake --build . --config ${{ env.BUILD_TYPE }} --parallel
 
     - name: Package ZIP
       shell: pwsh
       run: |
         cd build
         mkdir package
-        copy src\KeePassXC.exe package\
-        xcopy /s /y src\*.dll package\  # Qt/YubiKey DLLs
+        copy src\Release\KeePassXC.exe package\
+        xcopy /s /y src\Release\*.dll package\
         Compress-Archive -Path package\* -DestinationPath KeePassXC-2.7.11-Win64-Custom.zip
 
     - name: Upload artifact
