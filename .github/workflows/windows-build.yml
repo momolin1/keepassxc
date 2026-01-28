@@ -12,7 +12,6 @@ jobs:
         ref: 2.7.11
         submodules: recursive
 
-    # vcpkg classic mode (ignores vcpkg.json)
     - name: Cache vcpkg
       uses: actions/cache@v4
       id: cache-vcpkg
@@ -24,18 +23,16 @@ jobs:
       shell: cmd
       run: |
         if not exist C:\vcpkg\vcpkg.exe (
-          rmdir /s /q C:\vcpkg
+          rmdir /s /q C:\vcpkg 2>nul
           git clone https://github.com/Microsoft/vcpkg.git C:\vcpkg
           call C:\vcpkg\bootstrap-vcpkg.bat
         )
-        C:\vcpkg\vcpkg.exe install --triplet x64-windows ^
-          --x-manifest-mode=classic ^
+        C:\vcpkg\vcpkg.exe install --triplet x64-windows --classic ^
           qt5-base qt5-svg qt5-tools ^
           libgcrypt libargon2 libqrencode ^
-          botan yubico-piv-tool ^
-          argon2 --clean-after-build
+          botan yubico-piv-tool argon2 ^
+          --clean-after-build
 
-    # Build cache
     - name: Cache build
       uses: actions/cache@v4
       with:
