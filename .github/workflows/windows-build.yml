@@ -1,4 +1,4 @@
-name: Build KeePassXC 2.7.11 Windows x64 (vcpkg Fixed + VS)
+name: KeePassXC Windows Build (Classic vcpkg + VS)
 
 on: [workflow_dispatch]
 
@@ -12,15 +12,15 @@ jobs:
         ref: 2.7.11
         submodules: recursive
 
-    # Safe vcpkg (cmd for bat)
+    # vcpkg classic mode (ignores vcpkg.json)
     - name: Cache vcpkg
-      id: cache-vcpkg
       uses: actions/cache@v4
+      id: cache-vcpkg
       with:
         path: C:\vcpkg
-        key: vcpkg-keepassxc-${{ hashFiles('CMakeLists.txt') }}
+        key: vcpkg-keepassxc-classic-${{ hashFiles('CMakeLists.txt') }}
 
-    - name: Setup vcpkg
+    - name: Setup vcpkg Classic
       shell: cmd
       run: |
         if not exist C:\vcpkg\vcpkg.exe (
@@ -29,18 +29,20 @@ jobs:
           call C:\vcpkg\bootstrap-vcpkg.bat
         )
         C:\vcpkg\vcpkg.exe install --triplet x64-windows ^
-          qt5-base[core,svg,tools] ^
-          libgcrypt libargon2 libqrencode botan ^
-          yubico-piv-tool argon2
+          --x-manifest-mode=classic ^
+          qt5-base qt5-svg qt5-tools ^
+          libgcrypt libargon2 libqrencode ^
+          botan yubico-piv-tool ^
+          argon2 --clean-after-build
 
-    # Build steps same
+    # Build cache
     - name: Cache build
       uses: actions/cache@v4
       with:
         path: build
-        key: build-vs-${{ hashFiles('CMakeLists.txt') }}
+        key: build-vs-keepassxc-${{ hashFiles('CMakeLists.txt') }}
 
-    - name: Configure
+    - name: Configure CMake
       shell: cmd
       run: |
         cmake -B build ^
@@ -55,7 +57,5 @@ jobs:
           -DWITH_XC_BROWSER=OFF ^
           -DWITH_XC_FAVICON=OFF ^
           -DWITH_XC_SSHAGENT=OFF ^
-          -DWITH_XC_KEESHARE=OFF ^
-          -DWITH_XC_YUBIKEY=OFF
-
+          -DWITH_XC_KEESHARE=OFF
 
