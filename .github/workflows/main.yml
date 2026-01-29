@@ -27,6 +27,7 @@ jobs:
 
       - name: Cache vcpkg root
         uses: actions/cache@v4
+        id: cache-vcpkg        
         with:
           path: ${{ env.VCPKG_ROOT }}
           key: vcpkg-${{ hashFiles('vcpkg.json') }}-${{ runner.os }}
@@ -42,18 +43,30 @@ jobs:
 
       - name: Cache build
         uses: actions/cache@v4
+        id: cache-build        
         with:
           path: build
           key: build-${{ runner.os }}-${{ hashFiles('CMakeLists.txt') }}-${{ github.sha }}
           restore-keys: build-${{ runner.os }}-${{ hashFiles('CMakeLists.txt') }}-
 
-      - name: Configure CMake
+      - name: mkdir build
+        if: steps.cache-build.outputs.cache-hit != 'true'      
+        run: mkdir build
+            
+      - name: Configure CMake (YOUR FLAGS)
         run: |
-          mkdir build
-          cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
-            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" `
-            -DWITH_XC_ALL=ON `
-            -DWITH_XC_WINDOWSHELLO=ON
+          cmake -S . -B build -G "Visual Studio 17 2022" -A x64 ^
+            -DCMAKE_TOOLCHAIN_FILE="${{env.VCPKG_ROOT}}\scripts\buildsystems\vcpkg.cmake" `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DWITH_XC_ALL=OFF `
+            -DWITH_XC_AUTOTYPE=ON `
+            -DWITH_XC_BROWSER=ON `
+            -DWITH_XC_BROWSER_PASSKEYS=ON `
+            -DWITH_XC_YUBIKEY=ON `
+            -DWITH_XC_NETWORKING=OFF `
+            -DWITH_XC_UPDATECHECK=OFF `
+            -DWITH_XC_SSHAGENT=OFF `
+            -DWITH_XC_KEESHARE=OFF      
 
       - name: Build  # <-- vcpkg auto-installs from vcpkg.json + cppwinrt
         run: cmake --build build --config Release --parallel
