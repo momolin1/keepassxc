@@ -32,13 +32,6 @@ jobs:
           key: vcpkg-${{ hashFiles('vcpkg.json') }}-${{ runner.os }}
           restore-keys: vcpkg-${{ runner.os }}-
 
-      - name: Cache Ruby gems
-        uses: actions/cache@v4
-        with:
-          path: C:\Users\runneradmin\.gem\ruby\3.2.0\gems
-          key: ruby-gems-${{ runner.os }}
-          restore-keys: ruby-gems-${{ runner.os }}-
-
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
