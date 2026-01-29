@@ -51,7 +51,7 @@ jobs:
             
       - name: Configure CMake (YOUR FLAGS)
         run: |
-          if not exist "build\" mkdir "build"
+          if (-not (Test-Path build)) { mkdir build }
           cmake -S . -B build -G "Visual Studio 17 2022" -A x64 ^
             -DCMAKE_TOOLCHAIN_FILE="${{env.VCPKG_ROOT}}\scripts\buildsystems\vcpkg.cmake" `
             -DCMAKE_BUILD_TYPE=Release `
