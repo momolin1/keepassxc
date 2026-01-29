@@ -70,3 +70,15 @@ jobs:
       - name: Build  # <-- vcpkg auto-installs from vcpkg.json + cppwinrt
         run: cmake --build build --config Release --parallel
 
+      - name: Package clean ZIP
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem build\src\Release\* -Include *.exe,*.dll,qt.conf,platforms -Recurse | 
+                   Where { $_.Name -notmatch '\.(lib|exp|pdb)$' }
+          Compress-Archive $files.FullName "KeePassXC-2.7.11-Win64-Custom.zip"
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: KeePassXC-2.7.11-Win64-Custom
+          path: KeePassXC-2.7.11-Win64-Custom.zip
