@@ -1,4 +1,4 @@
-name: KeePassXC Windows Build (Classic vcpkg + VS)
+name: Windows Build (Custom + Cache - Simple vcpkg)
 
 on: [workflow_dispatch]
 
@@ -7,52 +7,68 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v4
-      with:
-        ref: 2.7.11
-        submodules: recursive
+      - name: Checkout stable 2.7.11
+        uses: actions/checkout@v4
+        with:
+          ref: 2.7.11
 
-    - name: Cache vcpkg
-      uses: actions/cache@v4
-      id: cache-vcpkg
-      with:
-        path: C:\vcpkg
-        key: vcpkg-keepassxc-classic-${{ hashFiles('CMakeLists.txt') }}
+      # CACHE 1: vcpkg (~25min → 1min)
+      - name: Cache vcpkg
+        uses: actions/cache@v4
+        id: cache-vcpkg
+        with:
+          path: C:\vcpkg
+          key: vcpkg-win-${{ hashFiles('CMakeLists.txt') }}
+          restore-keys: vcpkg-win-
 
-    - name: Setup vcpkg Classic
-      shell: cmd
-      run: |
-        if not exist C:\vcpkg\vcpkg.exe (
-          rmdir /s /q C:\vcpkg 2>nul
+      - name: Setup vcpkg (manual)
+        if: steps.cache-vcpkg.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
           git clone https://github.com/Microsoft/vcpkg.git C:\vcpkg
-          call C:\vcpkg\bootstrap-vcpkg.bat
-        )
-        C:\vcpkg\vcpkg.exe install --triplet x64-windows --classic ^
-          qt5-base qt5-svg qt5-tools ^
-          libgcrypt libargon2 libqrencode ^
-          botan yubico-piv-tool argon2 ^
-          --clean-after-build
+          . C:\vcpkg\bootstrap-vcpkg.bat
+          vcpkg install --triplet x64-windows qt5-base qt5-svg qt5-tools libgcrypt libargon2 libqrencode Botan yubico-piv-tool
 
-    - name: Cache build
-      uses: actions/cache@v4
-      with:
-        path: build
-        key: build-vs-keepassxc-${{ hashFiles('CMakeLists.txt') }}
+      # CACHE: Build (~35min → 5min)
+      - name: Cache build
+        uses: actions/cache@v4
+        with:
+          path: |
+            build/
+            !build/*.exe
+            !build/*.dll
+            !build/*.zip
+          key: win-build-${{ hashFiles('CMakeLists.txt') }}-${{ github.sha }}
+          restore-keys: win-build-
 
-    - name: Configure CMake
-      shell: cmd
-      run: |
-        cmake -B build ^
-          -G "Visual Studio 17 2022" ^
-          -A x64 ^
-          -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake ^
-          -DCMAKE_BUILD_TYPE=Release ^
-          -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded ^
-          -DWITH_TESTS=OFF ^
-          -DWITH_XC_ALL=OFF ^
-          -DWITH_XC_NETWORKING=OFF ^
-          -DWITH_XC_BROWSER=OFF ^
-          -DWITH_XC_FAVICON=OFF ^
-          -DWITH_XC_SSHAGENT=OFF ^
-          -DWITH_XC_KEESHARE=OFF
+      - name: Configure CMake (YOUR FLAGS)
+        run: |
+          cmake -S . -B build -G "Visual Studio 17 2022" -A x64 ^
+            -DCMAKE_TOOLCHAIN_FILE="${{ env.VCPKG_ROOT }}\scripts\buildsystems\vcpkg.cmake" ^
+            -DCMAKE_BUILD_TYPE=Release ^
+            -DWITH_XC_ALL=OFF ^
+            -DWITH_XC_AUTOTYPE=ON ^
+            -DWITH_XC_BROWSER=ON ^
+            -DWITH_XC_BROWSER_PASSKEYS=ON ^
+            -DWITH_XC_YUBIKEY=ON ^
+            -DWITH_XC_NETWORKING=OFF ^
+            -DWITH_XC_UPDATECHECK=OFF ^
+            -DWITH_XC_SSHAGENT=OFF ^
+            -DWITH_XC_KEESHARE=OFF ^
+            -DWITH_APP_BUNDLE=ON
 
+      - name: Build (sequential)
+        run: cmake --build build --config Release
+
+      - name: Package clean ZIP
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem build\src\Release\* -Include *.exe,*.dll,qt.conf,platforms -Recurse | 
+                   Where { $_.Name -notmatch '\.(lib|exp|pdb)$' }
+          Compress-Archive $files.FullName "KeePassXC-2.7.11-Win64-Custom.zip"
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: KeePassXC-2.7.11-Win64-Custom
+          path: KeePassXC-2.7.11-Win64-Custom.zip
