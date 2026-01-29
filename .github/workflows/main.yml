@@ -7,13 +7,13 @@ jobs:
     runs-on: windows-latest
     env:
       VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
-      VCPKG_ROOT: 'C:\vcpkg'
+      CHECKOUT_VER: '2.7.11'
 
     steps:
-      - name: Checkout stable 2.7.11
+      - name: Checkout stable version
         uses: actions/checkout@v4
         with:
-          ref: 2.7.11
+          ref: ${{env.CHECKOUT_VER}}
 
       - name: Setup MSVC Developer Prompt
         uses: ilammy/msvc-dev-cmd@v1
