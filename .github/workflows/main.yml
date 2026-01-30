@@ -75,9 +75,9 @@ jobs:
         run: |
           cd build
           cpack -G ZIP
-          xcopy /y /d ".\src\cli\Release*.dll" ".\_CPack_Packages\win64\ZIP\KeePassXC-%VERSION%-Win64"
-          xcopy /s /e /y /d ".\src\cli\plugins" ".\_CPack_Packages\win64\ZIP\KeePassXC-%VERSION%-Win64\plugins\"
-          tar -a -c -f "KeePassXC-%VERSION%-Win64.zip" ".\_CPack_Packages\win64\ZIP\KeePassXC-%VERSION%-Win64\*"
+          xcopy /y /d ".\src\cli\Release*.dll" ".\_CPack_Packages\win64\ZIP\KeePassXC-${{env.CHECKOUT_VER}}-Win64"
+          xcopy /s /e /y /d ".\src\cli\plugins" ".\_CPack_Packages\win64\ZIP\KeePassXC-${{env.CHECKOUT_VER}}-Win64\plugins\"
+          tar -a -c -f "KeePassXC-${{env.CHECKOUT_VER}}-Win64.zip" ".\_CPack_Packages\win64\ZIP\KeePassXC-${{env.CHECKOUT_VER}}-Win64\*"
 
       - name: Setup tmate session
         uses: mxschmitt/action-tmate@v3
