@@ -55,17 +55,17 @@ jobs:
         run: |
           if (-not (Test-Path build)) { mkdir build }
           # cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
-            -DCMAKE_TOOLCHAIN_FILE="${{env.VCPKG_ROOT}}\scripts\buildsystems\vcpkg.cmake" `
-            -DCMAKE_BUILD_TYPE=Release `
-            -DWITH_XC_ALL=OFF `
-            -DWITH_XC_AUTOTYPE=ON `
-            -DWITH_XC_BROWSER=ON `
-            -DWITH_XC_BROWSER_PASSKEYS=ON `
-            -DWITH_XC_YUBIKEY=ON `
-            -DWITH_XC_NETWORKING=OFF `
-            -DWITH_XC_UPDATECHECK=OFF `
-            -DWITH_XC_SSHAGENT=OFF `
-            -DWITH_XC_KEESHARE=OFF      
+          #  -DCMAKE_TOOLCHAIN_FILE="${{env.VCPKG_ROOT}}\scripts\buildsystems\vcpkg.cmake" `
+          #  -DCMAKE_BUILD_TYPE=Release `
+          #  -DWITH_XC_ALL=OFF `
+          #  -DWITH_XC_AUTOTYPE=ON `
+          #  -DWITH_XC_BROWSER=ON `
+          #  -DWITH_XC_BROWSER_PASSKEYS=ON `
+          #  -DWITH_XC_YUBIKEY=ON `
+          #  -DWITH_XC_NETWORKING=OFF `
+          #  -DWITH_XC_UPDATECHECK=OFF `
+          #  -DWITH_XC_SSHAGENT=OFF `
+          #  -DWITH_XC_KEESHARE=OFF      
 
       #- name: Build  # <-- vcpkg auto-installs from vcpkg.json + cppwinrt
         # run: cmake --build build --config Release --parallel
