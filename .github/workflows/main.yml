@@ -77,11 +77,9 @@ jobs:
           cpack -G ZIP
 
       - name: Setup tmate session
-        # tmate works on Windows, unlike upterm
         uses: mxschmitt/action-tmate@v3
-        if: always() # Use 'failure()' if you only want it to trigger on error
         with:
-          limit-access-to-actor: true
+          limit-access-to-actor: false  # Bypasses the SSH key requirement          
           
       # 6. Upload the final .zip
       - name: Upload Artifact
