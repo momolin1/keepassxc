@@ -72,6 +72,7 @@ jobs:
 
       # 5. Create the ZIP Package (Official CPack method)
       - name: Package with CPack
+        shell: cmd
         run: |
           cd build
           cpack -G ZIP
