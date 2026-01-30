@@ -68,7 +68,7 @@ jobs:
             -DWITH_XC_KEESHARE=OFF      
 
       - name: Build  # <-- vcpkg auto-installs from vcpkg.json + cppwinrt
-         run: cmake --build build --config Release --parallel
+        run: cmake --build build --config Release --parallel
 
       # 5. Create the ZIP Package (Official CPack method)
       - name: Package with CPack
