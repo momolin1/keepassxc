@@ -76,13 +76,12 @@ jobs:
           cd build
           cpack -G ZIP
 
-      - name: Setup upterm session
-        uses: lhotari/action-upterm@v1
+      - name: Setup tmate session
+        # tmate works on Windows, unlike upterm
+        uses: mxschmitt/action-tmate@v3
+        if: always() # Use 'failure()' if you only want it to trigger on error
         with:
-          ## This ensures only you can access it
           limit-access-to-actor: true
-          ## Optional: wait for 60 mins for you to connect
-          wait-timeout-minutes: 60
           
       # 6. Upload the final .zip
       - name: Upload Artifact
