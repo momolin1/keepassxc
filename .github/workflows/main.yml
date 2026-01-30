@@ -67,7 +67,7 @@ jobs:
             -DWITH_XC_SSHAGENT=OFF `
             -DWITH_XC_KEESHARE=OFF      
 
-      - name: Build  # <-- vcpkg auto-installs from vcpkg.json + cppwinrt
+      #- name: Build  # <-- vcpkg auto-installs from vcpkg.json + cppwinrt
         # run: cmake --build build --config Release --parallel
 
       # 5. Create the ZIP Package (Official CPack method)
