@@ -74,6 +74,10 @@ jobs:
       run: |
         cd build
         cmake --build . --parallel $(sysctl -n hw.ncpu)
+        echo "Ad-hoc signing the application bundle..."
+        # Sign the internal executable first, then the whole bundle
+        # This uses '-' which represents an ad-hoc signature (no Apple ID required)
+        codesign --force --deep --sign - src/KeePassXC.app
         make package
 
     - name: Package portable ZIP
